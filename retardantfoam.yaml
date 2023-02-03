@@ -1,0 +1,7 @@
+ipServerFiles:
+  - name: "testIp.txt"
+    bucket: "vatsim-vatdns"
+    region: "nyc3"
+    contents: |
+      Test data
+      weeeeeeee
