@@ -18,6 +18,8 @@ func main() {
 	viper.SetDefault("DNS_TTL", "10")
 	viper.SetDefault("TEST_MODE", false)
 	viper.SetDefault("HOSTNAME_TO_SERVE", "fsd.connect.vatsim.net")
+	viper.SetDefault("DEFAULT_FSD_SERVER", "")
+	viper.SetDefault("SENTRY_DSN", "")
 	err := viper.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("fatal error config file: %w", err))

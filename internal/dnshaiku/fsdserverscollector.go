@@ -14,7 +14,7 @@ type FsdServersCollector struct {
 	Name                 string
 }
 
-func newFsdServersCollector(fsdServer common.FSDServer) *FsdServersCollector {
+func newFsdServersCollector(fsdServer *common.FSDServer) *FsdServersCollector {
 	return &FsdServersCollector{
 		Name: fsdServer.Name,
 		CurrentUsers: prometheus.NewDesc("vatdns_dnshaiku_current_users",
@@ -47,10 +47,10 @@ func (collector FsdServersCollector) Collect(ch chan<- prometheus.Metric) {
 
 	//Note that you can pass CounterValue, GaugeValue, or UntypedValue types here.
 	fsdServer, _ := fsdServers.Load(collector.Name)
-	fsdServerStruct := fsdServer.(common.FSDServer)
+	fsdServerStruct := fsdServer.(*common.FSDServer)
 	m1 := prometheus.MustNewConstMetric(collector.CurrentUsers, prometheus.CounterValue, float64(fsdServerStruct.CurrentUsers))
 	m2 := prometheus.MustNewConstMetric(collector.MaxUsers, prometheus.CounterValue, float64(fsdServerStruct.MaxUsers))
-	m3 := prometheus.MustNewConstMetric(collector.AcceptingConnections, prometheus.CounterValue, float64(fsdServerStruct.AcceptingConnections))
+	m3 := prometheus.MustNewConstMetric(collector.AcceptingConnections, prometheus.CounterValue, float64(fsdServerStruct.AcceptingConnections()))
 	m4 := prometheus.MustNewConstMetric(collector.RemainingSlots, prometheus.CounterValue, float64(fsdServerStruct.RemainingSlots))
 	m1 = prometheus.NewMetricWithTimestamp(time.Now(), m1)
 	m2 = prometheus.NewMetricWithTimestamp(time.Now(), m2)

@@ -3,6 +3,7 @@ package dnshaiku
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/getsentry/sentry-go"
 	"github.com/jftuga/geodist"
 	"github.com/miekg/dns"
 	"github.com/oschwald/geoip2-golang"
@@ -10,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -22,31 +24,41 @@ import (
 )
 
 var (
-	fsdServers            sync.Map
-	promEnabledfsdServers sync.Map
-	db                    *geoip2.Reader
-	dnsRateCounter        *ratecounter.RateCounter
+	fsdServers     sync.Map
+	db             *geoip2.Reader
+	dnsRateCounter *ratecounter.RateCounter
+	dnsIpOverride  string
 )
 
 func Main() {
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn:              viper.GetString("SENTRY_DSN"),
+		TracesSampleRate: 0,
+	})
+	if err != nil {
+		logger.Info(fmt.Sprintf("sentry.Init: %s", err))
+	}
+	// Starts dataprocessor
+	go dataProcessorManager()
 	// Starts a basic HTTP endpoint to get data from dataprocessor
 	go handleWebRequests()
 	// Starts a tcp+udp DNS server
 	go startDnsServer()
 	// Starts a Prometheus exporter
-	go handleProm()
-	http.Handle("/metrics", promhttp.Handler())
+	go http.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", viper.GetString("PROMETHEUS_METRICS_PORT")), nil))
+
 }
 
 func pickServerToReturn(sourceIpLatLng geodist.Coord) common.FSDServer {
 	// Slices are easier for sorting
 	initialServers := make([]common.FSDServer, 0)
+	finalServers := make([]common.FSDServer, 0)
 
 	// Get servers into a slice, skipping those that are not accepting connections
 	fsdServers.Range(func(k, v interface{}) bool {
-		fsdServerStruct := v.(common.FSDServer)
-		if fsdServerStruct.AcceptingConnections == 0 {
+		fsdServerStruct := v.(*common.FSDServer)
+		if fsdServerStruct.AcceptingConnections() == 0 {
 			return true
 		}
 		miles, _, _ := geodist.VincentyDistance(sourceIpLatLng, geodist.Coord{Lat: fsdServerStruct.Latitude, Lon: fsdServerStruct.Longitude})
@@ -60,6 +72,14 @@ func pickServerToReturn(sourceIpLatLng geodist.Coord) common.FSDServer {
 		return true
 	})
 
+	if len(initialServers) == 0 {
+		logger.Error("No servers possible for a request, using default FSD server")
+		fsdServer, _ := fsdServers.Load(viper.GetString("DEFAULT_FSD_SERVER"))
+		fsdServerStruct := fsdServer.(common.FSDServer)
+		return fsdServerStruct
+
+	}
+
 	// Sort slice of servers by distance from request
 	sort.Slice(initialServers, func(i, j int) bool {
 		return initialServers[i].Distance < initialServers[j].Distance
@@ -67,8 +87,9 @@ func pickServerToReturn(sourceIpLatLng geodist.Coord) common.FSDServer {
 
 	// Get country for first server to be returned based upon distance
 	// and populate a new slice with other servers in that country
+
 	firstServer := initialServers[0].Country
-	finalServers := make([]common.FSDServer, 0)
+
 	for _, server := range initialServers {
 		if server.Country == firstServer {
 			finalServers = append(finalServers, server)
@@ -84,15 +105,26 @@ func pickServerToReturn(sourceIpLatLng geodist.Coord) common.FSDServer {
 	// Value returned from finalServers should be the closest server to a user with the most available slots
 	if len(finalServers) == 0 {
 		logger.Error("No server found for request returning random")
+		fsdServer, _ := fsdServers.Load(initialServers[0].Name)
+		fsdServerStruct := fsdServer.(*common.FSDServer)
+		fsdServerStruct.RemainingSlots -= 1
 		return initialServers[0]
 	} else {
+		fsdServer, _ := fsdServers.Load(finalServers[0].Name)
+		fsdServerStruct := fsdServer.(*common.FSDServer)
+		fsdServerStruct.RemainingSlots -= 1
 		return finalServers[0]
 	}
 }
 
 func parseQuery(m *dns.Msg, sourceIp net.Addr) {
 	dnsRateCounter.Incr(1)
-	sourceIpParsed := net.ParseIP(strings.Split(sourceIp.String(), ":")[0])
+	sourceIpParsed := net.IP{}
+	if dnsIpOverride == "" {
+		sourceIpParsed = net.ParseIP(strings.Split(sourceIp.String(), ":")[0])
+	} else {
+		sourceIpParsed = net.ParseIP(dnsIpOverride)
+	}
 	record, err := db.City(sourceIpParsed)
 	if err != nil {
 		log.Panic(err)
@@ -170,39 +202,34 @@ func startDnsServer() {
 			logger.Fatal(fmt.Sprintf("Failed to start server: %s", err.Error()))
 		}
 	}()
+	logger.Info(fmt.Sprintf("Default FSD server returned %s", viper.GetString("DEFAULT_FSD_SERVER")))
 }
 
 func handleWebRequests() {
 	logger.Info(fmt.Sprintf("Starting data web server at port %s", viper.GetString("HTTP_DATA_PORT")))
+
+	// Takes updates from dataprocessor
 	http.HandleFunc("/submit_data", func(w http.ResponseWriter, r *http.Request) {
-		fsdServerJson := common.FSDServer{}
+		fsdServerJson := &common.FSDServer{}
 		err := json.NewDecoder(r.Body).Decode(&fsdServerJson)
 		if err != nil {
 			return
 		}
-		fsdServers.Store(fsdServerJson.Name, fsdServerJson)
-		fsdServer, _ := fsdServers.Load(fsdServerJson.Name)
-		fsdServerStruct := fsdServer.(common.FSDServer)
-		logger.Info(fmt.Sprintf("%s | %d | %d | %d", fsdServerStruct.Name, fsdServerStruct.CurrentUsers, fsdServerStruct.MaxUsers, fsdServerStruct.AcceptingConnections))
+		fsdServer := common.NewMockFSDServer(fsdServerJson)
+		fsdServers.Store(fsdServerJson.Name, fsdServer)
+		logger.Info(fmt.Sprintf("%s | %d | %d | %d", fsdServer.Name, fsdServer.CurrentUsers, fsdServer.MaxUsers, fsdServer.AcceptingConnections()))
 		w.Write([]byte(fmt.Sprintf("Updated server %s", fsdServerJson.Name)))
+	})
+	// Allows setting an IP override for DNS requests. Really only needed for testing.
+	http.HandleFunc("/dns_ip_override", func(w http.ResponseWriter, r *http.Request) {
+		httpBody, _ := io.ReadAll(r.Body)
+		dnsIpOverride = string(httpBody)
+		logger.Info(fmt.Sprintf("Set DNS IP override to %s", httpBody))
+		w.Write([]byte(fmt.Sprintf("Set DNS IP override to %s", httpBody)))
 
 	})
+
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", viper.GetString("HTTP_DATA_PORT")), nil); err != nil {
 		log.Fatal(err)
-	}
-}
-
-func handleProm() {
-	for {
-		fsdServers.Range(func(k, v interface{}) bool {
-			fsdServerStruct := v.(common.FSDServer)
-			if _, ok := promEnabledfsdServers.Load(fsdServerStruct.Name); ok == false {
-				promEnabledfsdServers.Store(fsdServerStruct.Name, "")
-				fsdCollector := newFsdServersCollector(fsdServerStruct)
-				prometheus.MustRegister(fsdCollector)
-			}
-			return true
-		})
-		time.Sleep(5 * time.Second)
 	}
 }
