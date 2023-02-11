@@ -1,43 +1,44 @@
 mockFsdServers:
   - name: "fsd.usa-w.vatsim.net"
     ip_address: "137.184.8.6"
-    current_users: 290
+    current_users: 0
     max_users: 300
-    remaining_slots: 10
-    accepting_connections: 0
+    remaining_slots: 300
   - name: "fsd.usa-e2.vatsim.net"
     ip_address: "142.93.249.79"
-    current_users: 290
+    current_users: 0
     max_users: 300
-    remaining_slots: 10
-    accepting_connections: 1
+    remaining_slots: 300
   - name: "fsd.usa-e.vatsim.net"
     ip_address: "159.65.171.192"
-    current_users: 290
+    current_users: 0
     max_users: 300
-    remaining_slots: 10
+    remaining_slots: 300
   - name: "fsd.uk.vatsim.net"
     ip_address: "178.62.56.106"
-    current_users: 290
+    current_users: 0
     max_users: 300
-    remaining_slots: 10
+    remaining_slots: 300
   - name: "fsd.ger2.vatsim.net"
     ip_address: "167.99.248.14"
-    current_users: 290
+    current_users: 0
     max_users: 300
-    remaining_slots: 10
+    remaining_slots: 300
   - name: "fsd.ger.vatsim.net"
     ip_address: "178.128.193.227"
-    current_users: 296
+    current_users: 0
     max_users: 300
-    remaining_slots: 4
+    remaining_slots: 300
   - name: "fsd.can.vatsim.net"
     ip_address: "159.203.44.51"
-    current_users: 290
+    current_users: 0
     max_users: 300
-    remaining_slots: 10
+    remaining_slots: 300
   - name: "fsd.ams.vatsim.net"
     ip_address: "167.99.46.165"
-    current_users: 296
+    current_users: 0
     max_users: 300
-    remaining_slots: 4
+    remaining_slots: 300
+mockDnsQueries:
+  - source_ip_address: "99.238.4.106"
+    expected_ip_returned: "159.203.44.51"

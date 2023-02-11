@@ -1,8 +1,6 @@
 package common
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/digitalocean/godo"
 	"github.com/go-yaml/yaml"
@@ -17,16 +15,15 @@ import (
 )
 
 type FSDServer struct {
-	IpAddress            string  `json:"ip_address" yaml:"ip_address"`
-	Name                 string  `json:"name" yaml:"name"`
-	Country              string  `json:"country" yaml:"country"`
-	Latitude             float64 `json:"latitude" yaml:"latitude"`
-	Longitude            float64 `json:"longitude" yaml:"longitude"`
-	CurrentUsers         int     `json:"current_users" yaml:"current_users"`
-	MaxUsers             int     `json:"max_users" yaml:"max_users"`
-	RemainingSlots       int     `json:"remaining_slots" yaml:"remaining_slots"`
-	AcceptingConnections int     `json:"accepting_connections" yaml:"accepting_connections"`
-	Distance             float64
+	IpAddress      string  `json:"ip_address" yaml:"ip_address"`
+	Name           string  `json:"name" yaml:"name"`
+	Country        string  `json:"country" yaml:"country"`
+	Latitude       float64 `json:"latitude" yaml:"latitude"`
+	Longitude      float64 `json:"longitude" yaml:"longitude"`
+	CurrentUsers   int     `json:"current_users" yaml:"current_users"`
+	MaxUsers       int     `json:"max_users" yaml:"max_users"`
+	RemainingSlots int     `json:"remaining_slots" yaml:"remaining_slots"`
+	Distance       float64
 }
 
 func NewMockFSDServer(mockFsdServer *FSDServer) *FSDServer {
@@ -41,16 +38,15 @@ func NewMockFSDServer(mockFsdServer *FSDServer) *FSDServer {
 	countryCode := re.ReplaceAllString(strings.Split(mockFsdServer.Name, ".")[1], "")
 
 	return &FSDServer{
-		Name:                 mockFsdServer.Name,
-		Country:              countryCode,
-		IpAddress:            mockFsdServer.IpAddress,
-		CurrentUsers:         mockFsdServer.CurrentUsers,
-		MaxUsers:             mockFsdServer.MaxUsers,
-		RemainingSlots:       mockFsdServer.RemainingSlots,
-		Latitude:             possibleLocations[countryCode].Latitude,
-		Longitude:            possibleLocations[countryCode].Longitude,
-		AcceptingConnections: 0,
-		Distance:             0,
+		Name:           mockFsdServer.Name,
+		Country:        countryCode,
+		IpAddress:      mockFsdServer.IpAddress,
+		CurrentUsers:   mockFsdServer.CurrentUsers,
+		MaxUsers:       mockFsdServer.MaxUsers,
+		RemainingSlots: mockFsdServer.RemainingSlots,
+		Latitude:       possibleLocations[countryCode].Latitude,
+		Longitude:      possibleLocations[countryCode].Longitude,
+		Distance:       0,
 	}
 }
 
@@ -70,26 +66,35 @@ func NewFSDServer(droplet *godo.Droplet) *FSDServer {
 	}
 
 	return &FSDServer{
-		Name:                 droplet.Name,
-		IpAddress:            publicIPv4,
-		Country:              countryCode,
-		Latitude:             possibleLocations[countryCode].Latitude,
-		Longitude:            possibleLocations[countryCode].Longitude,
-		AcceptingConnections: 0,
-		Distance:             0,
+		Name:      droplet.Name,
+		IpAddress: publicIPv4,
+		Country:   countryCode,
+		Latitude:  possibleLocations[countryCode].Latitude,
+		Longitude: possibleLocations[countryCode].Longitude,
+		Distance:  0,
 	}
 }
+func (fsd *FSDServer) AcceptingConnections() int {
+	if viper.GetInt("FSD_SLOT_BUFFER") > fsd.RemainingSlots {
+		return 0
+	} else {
+		return 1
+	}
 
-func (fsd *FSDServer) Polling() {
+}
+
+func (fsd *FSDServer) Polling(enableFsdServerProm chan<- string) {
+	enableFsdServerProm <- fsd.Name
 	var parser expfmt.TextParser
 	client := http.Client{
 		Timeout: 2 * time.Second,
 	}
-	for {
+	ticker := time.NewTicker(time.Duration(viper.GetInt("FSD_SERVER_POLLING_INTERVAL")) * time.Second)
+	for _ = range ticker.C {
 		if viper.GetBool("TEST_MODE") == false {
 			resp, err := client.Get(fmt.Sprintf("http://%s:9001/metrics", fsd.IpAddress))
 			if err != nil {
-				fmt.Println("No response from request")
+				logger.Error(fmt.Sprintf("No response from request for %s", fsd.Name))
 				continue
 			}
 			if err != nil {
@@ -111,6 +116,7 @@ func (fsd *FSDServer) Polling() {
 					fsd.RemainingSlots = int(*v.Metric[0].GetGauge().Value)
 				}
 			}
+			logger.Debug(fmt.Sprintf("Updated metrics for %s", fsd.Name))
 		} else {
 			testingData := TestingDataYaml{}
 			yamlData, err := os.ReadFile("testing.yaml")
@@ -126,24 +132,7 @@ func (fsd *FSDServer) Polling() {
 				}
 			}
 		}
-		if viper.GetInt("FSD_SLOT_BUFFER") > fsd.RemainingSlots {
-			fsd.AcceptingConnections = 0
-		} else {
-			fsd.AcceptingConnections = 1
-		}
-		body, _ := json.Marshal(fsd)
-		for _, address := range strings.Split(viper.GetString("DNS_SERVERS"), ",") {
-			address := address
-			go func() {
-				_, err := client.Post(address, "application/json", bytes.NewBuffer(body))
-				if err != nil {
-					logger.Error(err.Error())
-				} else {
-					logger.Info(fmt.Sprintf("Posted data for %s | %s | %d", fsd.Name, address, fsd.AcceptingConnections))
-				}
-			}()
-		}
-		time.Sleep(time.Duration(viper.GetInt("FSD_SERVER_POLLING_INTERVAL")) * time.Second)
+
 	}
 }
 

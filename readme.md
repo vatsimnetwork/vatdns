@@ -2,12 +2,6 @@
 
 ## tl;dr
 
-### dataprocessor
-dataprocessor provides a service that collects FSD servers using DigitalOcean Droplet tags, starts scraping Prometheus
-metrics from FSD and then sends them to dnshaiku. dataprocessor mirrors metrics from FSD relating to server capacity 
-to understand the state of dataprocessor. dataprocessor is responsible for deciding if an FSD server should be considered when
-responding to a DNS request.
-
 ### dnshaiku
 dnshaiku handles DNS lookup requests for a configurable hostname. Possible IP addresses to respond to a request with are
 populated by dataprocessor. dnshaiku only considers servers that are accepting connections (see dataprocessor). dnshaiku
