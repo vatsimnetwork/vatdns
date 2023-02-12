@@ -23,7 +23,8 @@ type FSDServer struct {
 	CurrentUsers   int     `json:"current_users" yaml:"current_users"`
 	MaxUsers       int     `json:"max_users" yaml:"max_users"`
 	RemainingSlots int     `json:"remaining_slots" yaml:"remaining_slots"`
-	Distance       float64
+	Distance       float64 `json:"distance" yaml:"distance"`
+	AbleToUpdate   bool    `json:"able_to_update" yaml:"able_to_update"`
 }
 
 func NewMockFSDServer(mockFsdServer *FSDServer) *FSDServer {
@@ -47,6 +48,7 @@ func NewMockFSDServer(mockFsdServer *FSDServer) *FSDServer {
 		Latitude:       possibleLocations[countryCode].Latitude,
 		Longitude:      possibleLocations[countryCode].Longitude,
 		Distance:       0,
+		AbleToUpdate:   false,
 	}
 }
 
@@ -66,21 +68,27 @@ func NewFSDServer(droplet *godo.Droplet) *FSDServer {
 	}
 
 	return &FSDServer{
-		Name:      droplet.Name,
-		IpAddress: publicIPv4,
-		Country:   countryCode,
-		Latitude:  possibleLocations[countryCode].Latitude,
-		Longitude: possibleLocations[countryCode].Longitude,
-		Distance:  0,
+		Name:         droplet.Name,
+		IpAddress:    publicIPv4,
+		Country:      countryCode,
+		Latitude:     possibleLocations[countryCode].Latitude,
+		Longitude:    possibleLocations[countryCode].Longitude,
+		Distance:     0,
+		AbleToUpdate: false,
 	}
 }
 func (fsd *FSDServer) AcceptingConnections() int {
+	if fsd.MaxUsers <= 0 {
+		return 0
+	}
+	if fsd.AbleToUpdate == false {
+		return 0
+	}
 	if viper.GetInt("FSD_SLOT_BUFFER") > fsd.RemainingSlots {
 		return 0
 	} else {
 		return 1
 	}
-
 }
 
 func (fsd *FSDServer) Polling(enableFsdServerProm chan<- string) {
@@ -95,11 +103,13 @@ func (fsd *FSDServer) Polling(enableFsdServerProm chan<- string) {
 			resp, err := client.Get(fmt.Sprintf("http://%s:9001/metrics", fsd.IpAddress))
 			if err != nil {
 				logger.Error(fmt.Sprintf("No response from request for %s", fsd.Name))
+				fsd.AbleToUpdate = false
 				continue
 			}
 			if err != nil {
-				fmt.Println(err)
-				fmt.Println("Decode failed")
+				logger.Error(fmt.Sprintf(fmt.Sprintf("%s", err)))
+				fsd.AbleToUpdate = false
+				continue
 			}
 			promData, err := parser.TextToMetricFamilies(resp.Body)
 			if err != nil {
@@ -116,6 +126,7 @@ func (fsd *FSDServer) Polling(enableFsdServerProm chan<- string) {
 					fsd.RemainingSlots = int(*v.Metric[0].GetGauge().Value)
 				}
 			}
+			fsd.AbleToUpdate = true
 			logger.Debug(fmt.Sprintf("Updated metrics for %s", fsd.Name))
 		} else {
 			testingData := TestingDataYaml{}
@@ -129,6 +140,7 @@ func (fsd *FSDServer) Polling(enableFsdServerProm chan<- string) {
 					fsd.MaxUsers = v.MaxUsers
 					fsd.CurrentUsers = v.CurrentUsers
 					fsd.RemainingSlots = v.RemainingSlots
+					fsd.AbleToUpdate = true
 				}
 			}
 		}

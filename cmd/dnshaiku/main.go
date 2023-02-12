@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/fsnotify/fsnotify"
+	"github.com/pkg/profile"
 	"github.com/spf13/viper"
 	_ "net/http/pprof"
 	"vatdns/internal/dnshaiku"
@@ -9,6 +11,7 @@ import (
 )
 
 func main() {
+	defer profile.Start(profile.MemProfile).Stop()
 	logger.Info("Reading config")
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
@@ -24,6 +27,10 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		logger.Info(fmt.Sprintf("Config file changed: %s", e.Name))
+	})
+	viper.WatchConfig()
 	logger.Info("dnshaiku - if people can't connect...it was DNS")
 	dnshaiku.Main()
 }

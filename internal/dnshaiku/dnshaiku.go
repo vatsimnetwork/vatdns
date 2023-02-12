@@ -173,9 +173,9 @@ func startDnsServer() {
 
 	dns.HandleFunc(viper.GetString("HOSTNAME_TO_SERVE"), handleDnsRequest)
 	go func() {
-		// Starts udp DNS server
+		// Starts UDP DNS server
 		serverUDP := &dns.Server{Addr: fmt.Sprintf(":%s", viper.GetString("DNS_PORT")), Net: "udp"}
-		logger.Info(fmt.Sprintf("Starting at %s\n", viper.GetString("DNS_PORT")))
+		logger.Info(fmt.Sprintf("Starting UDP DNS server on port %s", viper.GetString("DNS_PORT")))
 		err := serverUDP.ListenAndServe()
 		defer func(server *dns.Server) {
 			err := server.Shutdown()
@@ -188,9 +188,9 @@ func startDnsServer() {
 		}
 	}()
 	go func() {
-		// Starts tcp DNS server
+		// Starts TCP DNS server
 		serverTCP := &dns.Server{Addr: fmt.Sprintf(":%s", viper.GetString("DNS_PORT")), Net: "tcp"}
-		viper.GetString("DNS_PORT")
+		logger.Info(fmt.Sprintf("Starting TCP DNS server on port %s", viper.GetString("DNS_PORT")))
 		err := serverTCP.ListenAndServe()
 		defer func(server *dns.Server) {
 			err := server.Shutdown()
@@ -208,7 +208,7 @@ func startDnsServer() {
 func handleWebRequests() {
 	logger.Info(fmt.Sprintf("Starting data web server at port %s", viper.GetString("HTTP_DATA_PORT")))
 
-	// Takes updates from dataprocessor
+	// This is for submitting data during testing
 	http.HandleFunc("/submit_data", func(w http.ResponseWriter, r *http.Request) {
 		fsdServerJson := &common.FSDServer{}
 		err := json.NewDecoder(r.Body).Decode(&fsdServerJson)

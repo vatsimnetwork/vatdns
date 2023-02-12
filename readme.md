@@ -3,8 +3,7 @@
 ## tl;dr
 
 ### dnshaiku
-dnshaiku handles DNS lookup requests for a configurable hostname. Possible IP addresses to respond to a request with are
-populated by dataprocessor. dnshaiku only considers servers that are accepting connections (see dataprocessor). dnshaiku
+dnshaiku handles DNS lookup requests for a configurable hostname. dnshaiku only considers servers that are accepting connections (see dataprocessor). dnshaiku
 handles checking distance to servers and serving the lowest populated server based upon the country of the server selected
 by distance. This is to cover cases where we have multiple FSD servers in one location (eg: USA-EAST or GERMANY). We want
 the one with least connections.
