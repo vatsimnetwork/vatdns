@@ -18,7 +18,7 @@ jobs:
       - name: Build testing image
         run: docker build . --file Dockerfiletesting --tag vatdns
       - name: Test dnshaiku
-        run: docker run vatdns go test -json -v
+        run: docker run vatdns go test -json -v test
       - name: Push image
         run: |
           IMAGE_ID=registry.digitalocean.com/vatsim-containers/$IMAGE_NAME
