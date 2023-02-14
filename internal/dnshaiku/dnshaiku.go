@@ -38,19 +38,29 @@ func Main() {
 	if err != nil {
 		logger.Info(fmt.Sprintf("sentry.Init: %s", err))
 	}
-	// Starts dataprocessor
+	// Starts dataprocessor and waits for data before starting
 	go dataProcessorManager()
-	// Starts a basic HTTP endpoint to get data from dataprocessor
+	ready := false
+	for {
+		fsdServers.Range(func(k, v interface{}) bool {
+			ready = true
+			return false
+		})
+		if ready {
+			break
+		}
+	}
+	// Handle various web things
 	go handleWebRequests()
 	// Starts a tcp+udp DNS server
 	go startDnsServer()
-	// Starts a Prometheus exporter
+	// Starts a Prometheus exporter endpoint to be scraped
 	go http.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", viper.GetString("PROMETHEUS_METRICS_PORT")), nil))
 
 }
 
-func pickServerToReturn(sourceIpLatLng geodist.Coord) common.FSDServer {
+func pickServerToReturn(sourceIpLatLng geodist.Coord) *common.FSDServer {
 	// Slices are easier for sorting
 	initialServers := make([]common.FSDServer, 0)
 	finalServers := make([]common.FSDServer, 0)
@@ -75,7 +85,7 @@ func pickServerToReturn(sourceIpLatLng geodist.Coord) common.FSDServer {
 	if len(initialServers) == 0 {
 		logger.Error("No servers possible for a request, using default FSD server")
 		fsdServer, _ := fsdServers.Load(viper.GetString("DEFAULT_FSD_SERVER"))
-		fsdServerStruct := fsdServer.(common.FSDServer)
+		fsdServerStruct := fsdServer.(*common.FSDServer)
 		return fsdServerStruct
 
 	}
@@ -87,9 +97,7 @@ func pickServerToReturn(sourceIpLatLng geodist.Coord) common.FSDServer {
 
 	// Get country for first server to be returned based upon distance
 	// and populate a new slice with other servers in that country
-
 	firstServer := initialServers[0].Country
-
 	for _, server := range initialServers {
 		if server.Country == firstServer {
 			finalServers = append(finalServers, server)
@@ -108,12 +116,12 @@ func pickServerToReturn(sourceIpLatLng geodist.Coord) common.FSDServer {
 		fsdServer, _ := fsdServers.Load(initialServers[0].Name)
 		fsdServerStruct := fsdServer.(*common.FSDServer)
 		fsdServerStruct.RemainingSlots -= 1
-		return initialServers[0]
+		return fsdServerStruct
 	} else {
 		fsdServer, _ := fsdServers.Load(finalServers[0].Name)
 		fsdServerStruct := fsdServer.(*common.FSDServer)
 		fsdServerStruct.RemainingSlots -= 1
-		return finalServers[0]
+		return fsdServerStruct
 	}
 }
 
@@ -140,7 +148,7 @@ func parseQuery(m *dns.Msg, sourceIp net.Addr) {
 			if err == nil {
 				m.Answer = append(m.Answer, rr)
 			}
-			logger.Info(fmt.Sprintf("IP: %s Served: %s Distance: %fmi", sourceIpParsed.String(), server.Name, server.Distance))
+			logger.Info(fmt.Sprintf("IP: %s Served: %s", sourceIpParsed.String(), server.Name))
 		}
 	}
 }
