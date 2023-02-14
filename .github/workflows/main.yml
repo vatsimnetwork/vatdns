@@ -19,7 +19,9 @@ jobs:
         run: docker build . --file Dockerfiletesting --tag vatdns
       - name: Start and test dnshaiku
         run: docker run -d --name vatdns -e TEST_MODE=true -e DEFAULT_FSD_SERVER=fsd.usa-w.vatsim.net -e DNS_PORT=10053 -p 10053:10053 vatdns /bin/dnshaiku
-      - name: logs
+      - name: Test dnshaiku
+        run: docker run vatdns go test -json -v ./test/...
+      - name: Logs
         run: docker logs vatdns
       - name: Push image
         run: |
@@ -34,5 +36,5 @@ jobs:
           [ "$VERSION" == "master" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
-          docker tag image $IMAGE_ID:$VERSION
+          docker tag vatdns $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
