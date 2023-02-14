@@ -1,8 +1,8 @@
 FROM golang:1.19-alpine AS build
 
 
-COPY . /usr/local/go/src/vatdns
-WORKDIR /usr/local/go/src/vatdns
+COPY . /go/src/vatdns
+WORKDIR /go/src/vatdns
 
 RUN apk add git
 RUN go build -o /bin/dnshaiku cmd/dnshaiku/main.go
