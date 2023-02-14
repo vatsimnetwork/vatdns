@@ -31,6 +31,8 @@ var (
 )
 
 func Main() {
+	// Handle various web things
+	go handleWebRequests()
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:              viper.GetString("SENTRY_DSN"),
 		TracesSampleRate: 0,
@@ -40,8 +42,6 @@ func Main() {
 	}
 	// Starts dataprocessor and waits for data before starting
 	go dataProcessorManager()
-	// Handle various web things
-	go handleWebRequests()
 	// Starts a tcp+udp DNS server
 	go startDnsServer()
 	// Starts a Prometheus exporter endpoint to be scraped
