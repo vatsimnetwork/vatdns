@@ -25,7 +25,7 @@ func main() {
 	viper.SetDefault("SENTRY_DSN", "")
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("fatal error config file: %w", err))
+		logger.Error(fmt.Sprintf("fatal error config file: %w", err))
 	}
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		logger.Info(fmt.Sprintf("Config file changed: %s", e.Name))
