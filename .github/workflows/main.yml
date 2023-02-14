@@ -15,8 +15,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Log into registry
         run: echo "${{ secrets.DO_REGISTRY_USERNAME }}" | docker login registry.digitalocean.com -u ${{ secrets.DO_REGISTRY_USERNAME }} --password-stdin
-      - name: Build image
-        run: docker build . --file Dockerfile --tag image
+      - name: Build testing image
+        run: docker build . --file Dockerfiletesting --tag image
       - name: Test dnshaiku
         run: cd /usr/local/go/src/vatdns && docker run image go test -json -v ./test/...
       - name: Push image
