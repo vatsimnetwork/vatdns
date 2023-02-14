@@ -48,7 +48,7 @@ func NewMockFSDServer(mockFsdServer *FSDServer) *FSDServer {
 		Latitude:       possibleLocations[countryCode].Latitude,
 		Longitude:      possibleLocations[countryCode].Longitude,
 		Distance:       0,
-		AbleToUpdate:   false,
+		AbleToUpdate:   mockFsdServer.AbleToUpdate,
 	}
 }
 
