@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/go-yaml/yaml"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -45,9 +44,7 @@ func TestDNS(t *testing.T) {
 		for _, v := range testingDataFile.MockFsdServers {
 			serverJson, _ := json.Marshal(v)
 			requestURL := fmt.Sprintf("http://127.0.0.1:8080/submit_data")
-			response, err := http.Post(requestURL, "application/json", bytes.NewBuffer(serverJson))
-			body, _ := ioutil.ReadAll(response.Body)
-			logger.Info(string(body))
+			_, err := http.Post(requestURL, "application/json", bytes.NewBuffer(serverJson))
 			if err != nil {
 				logger.Error("Unable to submit data to DNS server")
 			}
