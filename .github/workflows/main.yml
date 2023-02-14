@@ -18,7 +18,7 @@ jobs:
       - name: Build testing image
         run: docker build . --file Dockerfiletesting --tag image
       - name: Test dnshaiku
-        run: docker run go test -json -v test"
+        run: docker run go test -json -v test
       - name: Push image
         run: |
           IMAGE_ID=registry.digitalocean.com/vatsim-containers/$IMAGE_NAME
