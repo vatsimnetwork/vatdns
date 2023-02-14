@@ -20,7 +20,7 @@ jobs:
       - name: Start dnshaiku
         run: docker run -d --name vatdns -e TEST_MODE=true -e DEFAULT_FSD_SERVER=fsd.usa-w.vatsim.net -e DNS_PORT=10053 vatdns /bin/dnshaiku
       - name: Test dnshaiku
-        run: docker exec -it vatdns go test -json -v ./test/...
+        run: docker exec vatdns go test -json -v ./test/...
       - name: Push image
         run: |
           IMAGE_ID=registry.digitalocean.com/vatsim-containers/$IMAGE_NAME
