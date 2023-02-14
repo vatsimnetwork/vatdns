@@ -40,16 +40,6 @@ func Main() {
 	}
 	// Starts dataprocessor and waits for data before starting
 	go dataProcessorManager()
-	ready := false
-	for {
-		fsdServers.Range(func(k, v interface{}) bool {
-			ready = true
-			return false
-		})
-		if ready {
-			break
-		}
-	}
 	// Handle various web things
 	go handleWebRequests()
 	// Starts a tcp+udp DNS server
