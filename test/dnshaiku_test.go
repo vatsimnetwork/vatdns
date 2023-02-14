@@ -44,7 +44,8 @@ func TestDNS(t *testing.T) {
 		for _, v := range testingDataFile.MockFsdServers {
 			serverJson, _ := json.Marshal(v)
 			requestURL := fmt.Sprintf("http://127.0.0.1:8080/submit_data")
-			_, _ = http.Post(requestURL, "application/json", bytes.NewBuffer(serverJson))
+			_, err = http.Post(requestURL, "application/json", bytes.NewBuffer(serverJson))
+			logger.Fatal("Unable to submit data to DNS server")
 		}
 		for _, v := range testingDataFile.MockDnsQueries {
 			body := []byte(v.SourceIpAddress)
