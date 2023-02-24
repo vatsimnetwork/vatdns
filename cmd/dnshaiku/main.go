@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
-	"github.com/pkg/profile"
 	"github.com/spf13/viper"
 	_ "net/http/pprof"
 	"vatdns/internal/dnshaiku"
@@ -11,7 +10,6 @@ import (
 )
 
 func main() {
-	defer profile.Start(profile.MemProfile).Stop()
 	logger.Info("Reading config")
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
@@ -23,6 +21,7 @@ func main() {
 	viper.SetDefault("HOSTNAME_TO_SERVE", "fsd.connect.vatsim.net")
 	viper.SetDefault("DEFAULT_FSD_SERVER", "")
 	viper.SetDefault("SENTRY_DSN", "")
+	viper.SetDefault("HTTP_ENDPOINT_PORT", "8081")
 	err := viper.ReadInConfig()
 	if err != nil {
 		logger.Error(fmt.Sprintf("fatal error config file: %w", err))
