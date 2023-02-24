@@ -9,11 +9,12 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.1
 	github.com/cloudflare/cloudflare-go v0.60.0
 	github.com/digitalocean/godo v1.95.0
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/jftuga/geodist v1.0.0
 	github.com/miekg/dns v1.1.50
-	github.com/oschwald/geoip2-golang v1.8.0
 	github.com/paulbellamy/ratecounter v0.2.0
+	github.com/pkg/profile v1.7.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/common v0.37.0
 	github.com/spf13/viper v1.15.0
@@ -51,7 +52,6 @@ require (
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/felixge/fgprof v0.9.3 // indirect
 	github.com/flosch/pongo2/v4 v4.0.2 // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.8.1 // indirect
@@ -94,9 +94,9 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/oschwald/geoip2-golang v1.8.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.10.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
-	github.com/pkg/profile v1.7.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect

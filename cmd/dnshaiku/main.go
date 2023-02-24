@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
-	"github.com/pkg/profile"
 	"github.com/spf13/viper"
 	_ "net/http/pprof"
 	"vatdns/internal/dnshaiku"
@@ -11,7 +10,6 @@ import (
 )
 
 func main() {
-	defer profile.Start(profile.MemProfile).Stop()
 	logger.Info("Reading config")
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
