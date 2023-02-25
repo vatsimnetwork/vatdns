@@ -21,6 +21,7 @@ func main() {
 	viper.SetDefault("HOSTNAME_TO_SERVE", "fsd.connect.vatsim.net")
 	viper.SetDefault("DEFAULT_FSD_SERVER", "")
 	viper.SetDefault("SENTRY_DSN", "")
+	viper.SetDefault("HTTP_ENDPOINT_PORT", "8081")
 	err := viper.ReadInConfig()
 	if err != nil {
 		logger.Error(fmt.Sprintf("fatal error config file: %w", err))
