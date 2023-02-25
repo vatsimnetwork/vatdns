@@ -12,7 +12,7 @@ import (
 	"vatdns/internal/logger"
 )
 
-func handleDnsRequest(w dns.ResponseWriter, r *dns.Msg) {
+func HandleDnsRequest(w dns.ResponseWriter, r *dns.Msg) {
 	for _, extra := range r.Extra {
 		switch extra.(type) {
 		case *dns.OPT:
@@ -52,9 +52,9 @@ func StartDnsServer() {
 	}
 	db = geoip2DB
 
-	dns.HandleFunc("fsd.connect.vatsim.net", handleDnsRequest)
-	dns.HandleFunc("fsd-http.connect.vatsim.net", handleDnsRequest)
-	dns.HandleFunc("connect.vatsim.net", handleDnsRequest)
+	dns.HandleFunc("fsd.connect.vatsim.net", HandleDnsRequest)
+	dns.HandleFunc("fsd-http.connect.vatsim.net", HandleDnsRequest)
+	dns.HandleFunc("connect.vatsim.net", HandleDnsRequest)
 	go func() {
 		// Starts UDP DNS server
 		serverUDP := &dns.Server{Addr: fmt.Sprintf(":%s", viper.GetString("DNS_PORT")), Net: "udp"}
