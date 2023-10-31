@@ -2,8 +2,8 @@ package dnshaiku
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/vatsimnetwork/vatdns/pkg/common"
 	"time"
-	"vatdns/pkg/common"
 )
 
 type FsdServersCollector struct {

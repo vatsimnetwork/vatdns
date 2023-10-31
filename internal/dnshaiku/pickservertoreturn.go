@@ -3,9 +3,9 @@ package dnshaiku
 import (
 	"github.com/jftuga/geodist"
 	"github.com/spf13/viper"
+	"github.com/vatsimnetwork/vatdns/internal/logger"
+	"github.com/vatsimnetwork/vatdns/pkg/common"
 	"sort"
-	"vatdns/internal/logger"
-	"vatdns/pkg/common"
 )
 
 func PickServerToReturn(sourceIpLatLng geodist.Coord) *common.FSDServer {

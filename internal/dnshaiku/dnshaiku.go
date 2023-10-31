@@ -7,11 +7,12 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
+	"github.com/vatsimnetwork/vatdns/internal/logger"
+	"github.com/vatsimnetwork/vatdns/pkg/common"
 	"log"
 	"net"
 	"net/http"
 	"sync"
-	"vatdns/internal/logger"
 )
 
 var (
@@ -42,10 +43,23 @@ func Main() {
 	if err != nil {
 		logger.Info(fmt.Sprintf("sentry.Init: %s", err))
 	}
-	// Handle various web things
-	go StartDataWebServer()
 	// Starts dataprocessor and waits for data before starting
 	go dataProcessorManager()
+	for {
+		activeServers := 0
+		fsdServers.Range(func(k, v interface{}) bool {
+			fsdServerStruct := v.(*common.FSDServer)
+			if fsdServerStruct.AcceptingConnections() == 1 {
+				activeServers++
+			}
+			return true
+		})
+		if activeServers > 0 {
+			break
+		}
+	}
+	// Handle various web things
+	go StartDataWebServer()
 	// Starts a tcp+udp DNS server
 	go StartDnsServer()
 	// Starts an HTTP server to return an IP to connect to

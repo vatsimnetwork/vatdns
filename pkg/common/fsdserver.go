@@ -4,27 +4,30 @@ import (
 	"fmt"
 	"github.com/digitalocean/godo"
 	"github.com/go-yaml/yaml"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/expfmt"
 	"github.com/spf13/viper"
+	"github.com/vatsimnetwork/vatdns/internal/logger"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"time"
-	"vatdns/internal/logger"
 )
 
 type FSDServer struct {
-	IpAddress      string  `json:"ip_address" yaml:"ip_address"`
-	Name           string  `json:"name" yaml:"name"`
-	Country        string  `json:"country" yaml:"country"`
-	Latitude       float64 `json:"latitude" yaml:"latitude"`
-	Longitude      float64 `json:"longitude" yaml:"longitude"`
-	CurrentUsers   int     `json:"current_users" yaml:"current_users"`
-	MaxUsers       int     `json:"max_users" yaml:"max_users"`
-	RemainingSlots int     `json:"remaining_slots" yaml:"remaining_slots"`
-	Distance       float64 `json:"distance" yaml:"distance"`
-	AbleToUpdate   bool    `json:"able_to_update" yaml:"able_to_update"`
+	IpAddress           string  `json:"ip_address" yaml:"ip_address"`
+	Name                string  `json:"name" yaml:"name"`
+	Country             string  `json:"country" yaml:"country"`
+	Latitude            float64 `json:"latitude" yaml:"latitude"`
+	Longitude           float64 `json:"longitude" yaml:"longitude"`
+	CurrentUsers        int     `json:"current_users" yaml:"current_users"`
+	MaxUsers            int     `json:"max_users" yaml:"max_users"`
+	RemainingSlots      int     `json:"remaining_slots" yaml:"remaining_slots"`
+	Distance            float64 `json:"distance" yaml:"distance"`
+	AbleToUpdate        bool    `json:"able_to_update" yaml:"able_to_update"`
+	UpdateFailureCount  int     `json:"update_failure_count" yaml:"update_failure_count"`
+	PrometheusCollector prometheus.Collector
 }
 
 func NewMockFSDServer(mockFsdServer *FSDServer) *FSDServer {
@@ -39,16 +42,17 @@ func NewMockFSDServer(mockFsdServer *FSDServer) *FSDServer {
 	countryCode := re.ReplaceAllString(strings.Split(mockFsdServer.Name, ".")[1], "")
 
 	return &FSDServer{
-		Name:           mockFsdServer.Name,
-		Country:        countryCode,
-		IpAddress:      mockFsdServer.IpAddress,
-		CurrentUsers:   mockFsdServer.CurrentUsers,
-		MaxUsers:       mockFsdServer.MaxUsers,
-		RemainingSlots: mockFsdServer.RemainingSlots,
-		Latitude:       possibleLocations[countryCode].Latitude,
-		Longitude:      possibleLocations[countryCode].Longitude,
-		Distance:       0,
-		AbleToUpdate:   mockFsdServer.AbleToUpdate,
+		Name:               mockFsdServer.Name,
+		Country:            countryCode,
+		IpAddress:          mockFsdServer.IpAddress,
+		CurrentUsers:       mockFsdServer.CurrentUsers,
+		MaxUsers:           mockFsdServer.MaxUsers,
+		RemainingSlots:     mockFsdServer.RemainingSlots,
+		Latitude:           possibleLocations[countryCode].Latitude,
+		Longitude:          possibleLocations[countryCode].Longitude,
+		Distance:           0,
+		AbleToUpdate:       mockFsdServer.AbleToUpdate,
+		UpdateFailureCount: 0,
 	}
 }
 
@@ -68,13 +72,14 @@ func NewFSDServer(droplet *godo.Droplet) *FSDServer {
 	}
 
 	return &FSDServer{
-		Name:         droplet.Name,
-		IpAddress:    publicIPv4,
-		Country:      countryCode,
-		Latitude:     possibleLocations[countryCode].Latitude,
-		Longitude:    possibleLocations[countryCode].Longitude,
-		Distance:     0,
-		AbleToUpdate: false,
+		Name:               droplet.Name,
+		IpAddress:          publicIPv4,
+		Country:            countryCode,
+		Latitude:           possibleLocations[countryCode].Latitude,
+		Longitude:          possibleLocations[countryCode].Longitude,
+		Distance:           0,
+		AbleToUpdate:       false,
+		UpdateFailureCount: 0,
 	}
 }
 func (fsd *FSDServer) AcceptingConnections() int {
@@ -91,7 +96,7 @@ func (fsd *FSDServer) AcceptingConnections() int {
 	}
 }
 
-func (fsd *FSDServer) Polling(enableFsdServerProm chan<- string) {
+func (fsd *FSDServer) Polling(enableFsdServerProm chan<- string, deregisterFsd chan<- string) {
 	enableFsdServerProm <- fsd.Name
 	var parser expfmt.TextParser
 	client := http.Client{
@@ -99,35 +104,40 @@ func (fsd *FSDServer) Polling(enableFsdServerProm chan<- string) {
 	}
 	ticker := time.NewTicker(time.Duration(viper.GetInt("FSD_SERVER_POLLING_INTERVAL")) * time.Second)
 	for _ = range ticker.C {
+		fsdServerRemoveFailureCount := viper.GetInt("FSD_SERVER_REMOVE_FAILURE_COUNT")
+		if fsd.UpdateFailureCount >= fsdServerRemoveFailureCount {
+			logger.Info(fmt.Sprintf("%s has failed to update %d times. Removing from server list", fsd.Name, fsdServerRemoveFailureCount))
+			deregisterFsd <- fsd.Name
+			return
+		}
 		if viper.GetBool("TEST_MODE") == false {
 			resp, err := client.Get(fmt.Sprintf("http://%s:9001/metrics", fsd.IpAddress))
 			if err != nil {
-				logger.Error(fmt.Sprintf("No response from request for %s", fsd.Name))
-				fsd.AbleToUpdate = false
-				continue
-			}
-			if err != nil {
 				logger.Error(fmt.Sprintf(fmt.Sprintf("%s", err)))
 				fsd.AbleToUpdate = false
-				continue
-			}
-			promData, err := parser.TextToMetricFamilies(resp.Body)
-			if err != nil {
-				logger.Fatal(fmt.Sprintf("Bad prometheus data from FSD %s", fsd.Name))
-			}
-			for k, v := range promData {
-				if k == "fsd_maxclients" {
-					fsd.MaxUsers = int(*v.Metric[0].GetGauge().Value)
+				fsd.UpdateFailureCount += 1
+			} else {
+				promData, err := parser.TextToMetricFamilies(resp.Body)
+				if err != nil {
+					fsd.UpdateFailureCount += 1
+					logger.Error(fmt.Sprintf("Bad prometheus data from FSD %s", fsd.Name))
+					continue
 				}
-				if k == "interface_client_current" {
-					fsd.CurrentUsers = int(*v.Metric[0].GetGauge().Value)
+				for k, v := range promData {
+					if k == "fsd_maxclients" {
+						fsd.MaxUsers = int(*v.Metric[0].GetGauge().Value)
+					}
+					if k == "interface_client_current" {
+						fsd.CurrentUsers = int(*v.Metric[0].GetGauge().Value)
+					}
+					if k == "fsd_remainingslots" {
+						fsd.RemainingSlots = int(*v.Metric[0].GetGauge().Value)
+					}
 				}
-				if k == "fsd_remainingslots" {
-					fsd.RemainingSlots = int(*v.Metric[0].GetGauge().Value)
-				}
+				fsd.AbleToUpdate = true
+				fsd.UpdateFailureCount = 0
+				logger.Debug(fmt.Sprintf("Updated metrics for %s", fsd.Name))
 			}
-			fsd.AbleToUpdate = true
-			logger.Debug(fmt.Sprintf("Updated metrics for %s", fsd.Name))
 		} else {
 			testingData := TestingDataYaml{}
 			yamlData, err := os.ReadFile("testing.yaml")

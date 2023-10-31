@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"github.com/jftuga/geodist"
 	"github.com/spf13/viper"
+	"github.com/vatsimnetwork/vatdns/internal/logger"
+	"github.com/vatsimnetwork/vatdns/pkg/common"
 	"io"
 	"log"
 	"net"
 	"net/http"
-	"vatdns/internal/logger"
-	"vatdns/pkg/common"
 )
 
 func StartWebServer() {

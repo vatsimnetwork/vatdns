@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
+	"github.com/vatsimnetwork/vatdns/internal/dnshaiku"
+	"github.com/vatsimnetwork/vatdns/internal/logger"
 	_ "net/http/pprof"
-	"vatdns/internal/dnshaiku"
-	"vatdns/internal/logger"
 )
 
 func main() {
@@ -22,6 +22,7 @@ func main() {
 	viper.SetDefault("DEFAULT_FSD_SERVER", "")
 	viper.SetDefault("SENTRY_DSN", "")
 	viper.SetDefault("HTTP_ENDPOINT_PORT", "8081")
+	viper.SetDefault("FSD_SERVER_REMOVE_FAILURE_COUNT", 2)
 	_ = viper.ReadInConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		logger.Info(fmt.Sprintf("Config file changed: %s", e.Name))

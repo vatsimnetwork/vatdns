@@ -7,9 +7,9 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
+	"github.com/vatsimnetwork/vatdns/internal/logger"
 	"log"
 	"time"
-	"vatdns/internal/logger"
 )
 
 func HandleDnsRequest(w dns.ResponseWriter, r *dns.Msg) {

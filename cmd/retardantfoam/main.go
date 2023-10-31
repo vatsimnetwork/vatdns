@@ -13,6 +13,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/go-yaml/yaml"
 	"github.com/spf13/viper"
+	"github.com/vatsimnetwork/vatdns/internal/logger"
 	"log"
 	"net"
 	_ "net/http/pprof"
@@ -20,7 +21,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"vatdns/internal/logger"
 )
 
 var (

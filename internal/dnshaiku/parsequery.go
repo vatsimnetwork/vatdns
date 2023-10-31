@@ -5,9 +5,9 @@ import (
 	"github.com/jftuga/geodist"
 	"github.com/miekg/dns"
 	"github.com/spf13/viper"
+	"github.com/vatsimnetwork/vatdns/internal/logger"
 	"log"
 	"net"
-	"vatdns/internal/logger"
 )
 
 func ParseQuery(m *dns.Msg, sourceIp net.Addr) {
