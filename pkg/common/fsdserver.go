@@ -3,11 +3,11 @@ package common
 import (
 	"fmt"
 	"github.com/digitalocean/godo"
-	"github.com/go-yaml/yaml"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/expfmt"
 	"github.com/spf13/viper"
 	"github.com/vatsimnetwork/vatdns/internal/logger"
+	"gopkg.in/yaml.v3"
 	"net/http"
 	"os"
 	"regexp"

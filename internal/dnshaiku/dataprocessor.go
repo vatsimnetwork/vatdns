@@ -47,10 +47,20 @@ func dataProcessorManager() {
 					if strings.Split(d.Name, ".")[0] != "fsd" {
 						continue
 					}
-					logger.Info(fmt.Sprintf("Found FSD server %s | %s", d.Name, d.Networks.V4[1].IPAddress))
+					dropletIp, err := d.PublicIPv4()
+					if err != nil {
+						logger.Error(fmt.Sprintf("Unable to find public IPv4 for FSD server %s, skipping", d.Name))
+						continue
+					}
+					_, _, err = net.ParseCIDR(fmt.Sprintf("%s/32", dropletIp))
+					if err != nil {
+						logger.Error(fmt.Sprintf("Unable to validate IP for %s, skipping", d.Name))
+						continue
+					}
+					logger.Info(fmt.Sprintf("Found FSD server %s | %s", d.Name, dropletIp))
 
 					// Are we alive check
-					c, err := net.Dial("tcp", fmt.Sprintf("%s:%s", d.Name, "6809"))
+					c, err := net.Dial("tcp", fmt.Sprintf("%s:%s", dropletIp, "6809"))
 					if err != nil {
 						logger.Info(fmt.Sprintf("%s", err))
 						continue

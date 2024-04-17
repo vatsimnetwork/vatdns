@@ -5,15 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-yaml/yaml"
 	"github.com/stretchr/testify/assert"
+	"github.com/vatsimnetwork/vatdns/internal/logger"
+	"github.com/vatsimnetwork/vatdns/pkg/common"
+	"gopkg.in/yaml.v3"
 	"net"
 	"net/http"
 	"os"
 	"testing"
 	"time"
-	"vatdns/internal/logger"
-	"vatdns/pkg/common"
 )
 
 func dnsLookup() string {
