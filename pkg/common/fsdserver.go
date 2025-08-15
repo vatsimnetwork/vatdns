@@ -34,6 +34,7 @@ func NewMockFSDServer(mockFsdServer *FSDServer) *FSDServer {
 	possibleLocations := make(map[string]FSDServerLocation)
 	possibleLocations["usa-w"] = FSDServerLocation{Latitude: 37.7749, Longitude: -122.431297}
 	possibleLocations["usa-e"] = FSDServerLocation{Latitude: 40.7128, Longitude: -73.935242}
+	possibleLocations["usa-se"] = FSDServerLocation{Latitude: 33.7501, Longitude: -84.3885}
 	possibleLocations["can"] = FSDServerLocation{Latitude: 43.6532, Longitude: -79.3832}
 	possibleLocations["uk"] = FSDServerLocation{Latitude: 51.5072, Longitude: 0.1276}
 	possibleLocations["ger"] = FSDServerLocation{Latitude: 50.1109, Longitude: 8.6821}
@@ -60,6 +61,7 @@ func NewFSDServer(droplet *godo.Droplet) *FSDServer {
 	possibleLocations := make(map[string]FSDServerLocation)
 	possibleLocations["usa-w"] = FSDServerLocation{Latitude: 37.7749, Longitude: -122.431297}
 	possibleLocations["usa-e"] = FSDServerLocation{Latitude: 40.7128, Longitude: -73.935242}
+	possibleLocations["usa-se"] = FSDServerLocation{Latitude: 33.7501, Longitude: -84.3885}
 	possibleLocations["can"] = FSDServerLocation{Latitude: 43.6532, Longitude: -79.3832}
 	possibleLocations["uk"] = FSDServerLocation{Latitude: 51.5072, Longitude: 0.1276}
 	possibleLocations["ger"] = FSDServerLocation{Latitude: 50.1109, Longitude: 8.6821}
